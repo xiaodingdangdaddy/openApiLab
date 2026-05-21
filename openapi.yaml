@@ -976,9 +976,12 @@ components:
         changeType:
           type: string
           description: 版本变更类型
-          enum: [CREATE, RELEASE, COLUMN_ADDED, COLUMN_MODIFIED, COLUMN_DELETED,
-                 PHYSICAL_MODEL_ADDED, PHYSICAL_MODEL_DELETED, PHYSICAL_MODEL_CHANGED,
-                 OPEN_FLAG_CHANGED]
+          enum:
+            - CREATE
+            - COLUMN_ADDED
+            - PHYSICAL_MODEL_ADDED
+            - PHYSICAL_MODEL_DELETED
+            - PHYSICAL_COLUMN_ADDED
         changeSummary:
           type: string
           description: 变更摘要描述
@@ -1045,6 +1048,8 @@ components:
             physicalModelsAdded:
               type: integer
             physicalModelsDeleted:
+              type: integer
+            physicalColumnsAdded:
               type: integer
 
     # ===== 响应结构（逻辑模型）=====
