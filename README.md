@@ -1,6 +1,6 @@
 # 元数据管理查询接口（Metadata Query API）
 
-基于 OpenAPI 3.1 规范（v2.0）封装的元数据管理统一查询接口，对外提供逻辑模型、血缘关系、数据质量、TMF SID 数据目录的查询能力，以及版本变更追踪与比对能力。
+基于 OpenAPI 3.1 规范（v2.0）封装的元数据管理统一查询接口，对外提供逻辑模型、血缘关系、版本追踪、数据质量、TMF SID 数据目录的查询能力。
 
 ---
 
@@ -35,41 +35,35 @@
 | GET | `/logical-models/{tableName}/versions/{version}` | 指定版本详情快照 |
 | GET | `/logical-models/{tableName}/versions/diff` | 版本差异比对 |
 | GET | `/data-quality/results` | DQ 核查结果列表（分页） |
-| GET | `/data-quality/results/{jobInsId}` | DQ 核查结果详情（多维度） |
-| GET | `/data-quality/results/{jobInsId}/history` | 同一模型历史核查结果 |
-| GET | `/data-quality/results/{jobInsId}/diff` | 核查结果差异比对 |
+| GET | `/data-quality/results/{jobInsId}` | DQ 核查结果详情 |
 | GET | `/tmf-sid-catalogs` | TMF SID 目录树 |
 | GET | `/tmf-sid-catalogs/{catalogId}/models` | 目录下逻辑模型列表（支持搜索） |
 
 ---
 
-## 三、核心能力：版本变更追踪
+## 三、版本变更追踪规则
 
-### 3.1 逻辑模型版本变更
+### 触发版本 +1 的变化
 
-**触发版本 +1 的变化：**
-- `draft` → `release` 发布事件
-- 新增列 / 删除列 / 列重命名 / 类型变化
-- 列映射表达式变化
-- 关联物理模型新增 / 删除
-- 访问权限从开放变为私有
+| 变化类型 | 说明 |
+|---------|------|
+| 逻辑列新增 | `logicalColumns` 中出现新的 columnName |
+| 逻辑列删除 | `logicalColumns` 中某个 columnName 消失 |
+| 关联物理模型新增 | `relatedPhysicalModels` 中出现新的物理模型 |
+| 关联物理模型删除 | `relatedPhysicalModels` 中某个物理模型消失 |
+| 物理表列变化 | `physicalColumns` 中列增/删 |
 
-**不触发版本的变化（静默保存）：**
-- 描述/别名修改、`lastModifyTime` 更新等
+### 不触发版本的变化
 
-### 3.2 数据质量变更通知
+别名/描述修改、`lastModifyTime` 更新等描述性变化，静默保存，不通知用户。
 
-每次 DQ 任务运行生成新的 `jobInsId`，即一个核查结果快照。
-- 分数下降 → 强通知
-- `isCheckPass` 从通过→不通过 → 强通知
-- 新失败规则出现 → 通知
-- 分数不变/提升 → 可选通知
+### 数据质量
+
+不做版本变化追踪。每次 DQ 核查生成唯一 `jobInsId`，直接使用 `score` 字段作为评分指标。
 
 ---
 
 ## 四、认证方式
-
-所有接口通过 `Authorization: Bearer <token>` Header 认证。
 
 ```bash
 curl -k -X GET 'https://api.example.com/api/v1/logical-models?tenantId=your_tenant' \
@@ -83,7 +77,7 @@ curl -k -X GET 'https://api.example.com/api/v1/logical-models?tenantId=your_tena
 | 文件 | 说明 |
 |------|------|
 | `openapi.yaml` | OpenAPI 3.1 规范文件（v2.0），可导入 Apifox / Postman / Swagger UI |
-| `API接口文档.md` | 接口详细文档，含所有接口请求/响应示例、字段说明、变更规则 |
+| `API接口文档.md` | 接口详细文档，含请求/响应示例、字段说明、版本变更规则 |
 | `使用说明书.md` | 面向调用方的使用指南，含 Python 示例代码 |
 
 ---
@@ -96,7 +90,7 @@ curl -k -X GET 'https://api.example.com/api/v1/logical-models/dim_user?tenantId=
   -H 'Authorization: Bearer your_token'
 
 # 查询 DQ 核查结果
-curl -k -X GET 'https://api.example.com/api/v1/data-quality/results?tenantId=your_tenant&startDataTime=2024-04-01' \
+curl -k -X GET 'https://api.example.com/api/v1/data-quality/results?tenantId=your_tenant' \
   -H 'Authorization: Bearer your_token'
 
 # 比对版本差异
@@ -126,6 +120,5 @@ curl -k -X GET 'https://api.example.com/api/v1/logical-models/dim_user/versions/
 | `/logical-models/{tableName}/versions/diff` | 300ms ~ 1s |
 | `/data-quality/results` | 300ms ~ 1s |
 | `/data-quality/results/{jobInsId}` | 200ms ~ 1s |
-| `/data-quality/results/{jobInsId}/diff` | 300ms ~ 1s |
 | `/tmf-sid-catalogs` | 200ms ~ 2s |
 | `/tmf-sid-catalogs/{catalogId}/models` | 500ms ~ 3s |
