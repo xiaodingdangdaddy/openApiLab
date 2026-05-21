@@ -48,14 +48,20 @@
 | 变化类型 | 说明 |
 |---------|------|
 | 逻辑列新增 | `logicalColumns` 中出现新的 columnName |
-| 逻辑列删除 | `logicalColumns` 中某个 columnName 消失 |
 | 关联物理模型新增 | `relatedPhysicalModels` 中出现新的物理模型 |
 | 关联物理模型删除 | `relatedPhysicalModels` 中某个物理模型消失 |
-| 物理表列变化 | `physicalColumns` 中列增/删 |
+| 物理表列新增 | `physicalColumns` 中出现新的列 |
 
 ### 不触发版本的变化
 
-别名/描述修改、`lastModifyTime` 更新等描述性变化，静默保存，不通知用户。
+- 逻辑列删除（系统不允许）
+- 物理列删除（系统不允许）
+- 列重命名（系统不允许）
+- 列数据类型变化（系统不允许）
+- 列映射表达式变化（系统不允许）
+- 别名/描述修改、`lastModifyTime` 更新等描述性变化
+
+以上变化系统本身不允许操作，因此不作为版本变更条件。
 
 ### 数据质量
 
