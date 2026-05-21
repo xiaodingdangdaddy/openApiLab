@@ -2,11 +2,11 @@ openapi: 3.1.0
 info:
   title: 元数据管理查询接口
   description: |
-    统一封装逻辑模型、物理模型、血缘关系、TMF SID 数据目录、数据质量核查报告的查询 API。
-    基于已有接口标准化后的 OpenAPI 3.1 规范，提供分页查询、详情查询、血缘查询等能力。
+    统一封装逻辑模型、物理模型、血缘关系、TMF SID 数据目录、数据质量核查结果的查询 API。
+    基于已有接口标准化后的 OpenAPI 3.1 规范，提供分页查询、详情查询、血缘查询、能力。
     
     本接口采用 Pull 模式设计，供 Datahub 等元数据管理平台主动调用拉取元数据。
-  version: 1.0.0
+  version: 2.0.0
   contact:
     name: 架构团队
   license:
@@ -23,7 +23,7 @@ tags:
   - name: logical-models
     description: 逻辑模型管理
   - name: data-quality
-    description: 数据质量核查报告
+    description: 数据质量核查结果
   - name: tmf-sid-catalogs
     description: TMF SID 数据目录查询
 
@@ -158,23 +158,147 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  # ===== 版本历史 =====
+  /logical-models/{tableName}/versions:
+    get:
+      tags:
+        - logical-models
+      operationId: queryLogicalModelVersions
+      summary: 查询逻辑模型版本历史
+      description: |
+        查询逻辑模型的版本快照历史列表，按版本号倒序。
+        仅记录触发版本变更的事件（发布、列结构变化、映射关系变化），描述性变更不生成版本。
+      parameters:
+        - name: tableName
+          in: path
+          required: true
+          schema:
+            type: string
+          description: 逻辑模型表名
+        - name: tenantId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: pageNum
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogicalModelVersionListResponse'
+
+  /logical-models/{tableName}/versions/{version}:
+    get:
+      tags:
+        - logical-models
+      operationId: queryLogicalModelVersionDetail
+      summary: 查询逻辑模型指定版本详情
+      description: 查询逻辑模型指定版本的完整快照内容。
+      parameters:
+        - name: tableName
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: version
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: 版本号
+        - name: tenantId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogicalModelVersionDetailResponse'
+        '404':
+          description: 版本不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /logical-models/{tableName}/versions/diff:
+    get:
+      tags:
+        - logical-models
+      operationId: diffLogicalModelVersions
+      summary: 比对逻辑模型两个版本的差异
+      description: |
+        比较逻辑模型两个版本之间的差异，返回变更字段列表和汇总统计。
+        变更类型：ADDED（新增）、MODIFIED（修改）、DELETED（删除）
+      parameters:
+        - name: tableName
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: tenantId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: from
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: 比较起始版本号
+        - name: to
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: 比较目标版本号
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogicalModelDiffResponse'
+        '400':
+          description: 参数错误（from >= to 或版本不存在）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   # ============================================================
-  # 数据质量核查报告
+  # 数据质量核查结果
   # ============================================================
-  /data-quality/reports:
+  /data-quality/results:
     get:
       tags:
         - data-quality
-      operationId: queryDataQualityReports
-      summary: 查询数据质量核查报告列表
-      description: 分页查询数据质量核查报告列表，支持按目录、模型、时间范围筛选。
+      operationId: queryDataQualityResults
+      summary: 查询数据质量核查结果列表
+      description: 分页查询数据质量核查结果列表，支持按目录、模型、时间范围筛选。
       parameters:
         - name: tenantId
           in: query
           required: true
           schema:
             type: string
-          description: 租户ID，必选
         - name: catalogId
           in: query
           schema:
@@ -202,7 +326,6 @@ paths:
           schema:
             type: integer
             default: 1
-            minimum: 1
         - name: pageSize
           in: query
           schema:
@@ -215,15 +338,17 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DataQualityReportListResponse'
+                $ref: '#/components/schemas/DataQualityResultListResponse'
 
-  /data-quality/reports/{jobInsId}:
+  /data-quality/results/{jobInsId}:
     get:
       tags:
         - data-quality
-      operationId: queryDataQualityReportDetail
-      summary: 查询数据质量核查报告详情
-      description: 根据任务实例ID查询完整核查结果，包含表级、单表、字段级、SQL级等多维度结果。
+      operationId: queryDataQualityResultDetail
+      summary: 查询数据质量核查结果详情
+      description: |
+        根据任务实例ID查询完整核查结果，包含表级、单表、字段级、SQL级等多维度结果。
+        每次 DQ 任务运行生成唯一的 jobInsId，即为一个核查结果快照。
       parameters:
         - name: jobInsId
           in: path
@@ -237,9 +362,81 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DataQualityReportDetailResponse'
+                $ref: '#/components/schemas/DataQualityResultDetailResponse'
         '404':
-          description: 报告不存在
+          description: 核查结果不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /data-quality/results/{jobInsId}/history:
+    get:
+      tags:
+        - data-quality
+      operationId: queryDataQualityResultHistory
+      summary: 查询同一模型的历史核查结果
+      description: |
+        查询同一 tableCode 的历史核查结果列表，按时间倒序。
+        用于对比某模型的质量趋势变化。
+      parameters:
+        - name: jobInsId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: 当前核查结果ID
+        - name: tenantId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+            maximum: 50
+          description: 返回最近 N 条历史结果（不含当前）
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataQualityHistoryListResponse'
+
+  /data-quality/results/{jobInsId}/diff:
+    get:
+      tags:
+        - data-quality
+      operationId: diffDataQualityResults
+      summary: 比对两次核查结果的差异
+      description: |
+        比较当前核查结果与历史某次核查结果的差异。
+        返回分数变化、规则通过状态变化、错误记录数变化等。
+      parameters:
+        - name: jobInsId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: 当前核查结果ID
+        - name: compareWith
+          in: query
+          required: true
+          schema:
+            type: string
+          description: 对比核查结果ID
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataQualityDiffResponse'
+        '404':
+          description: 核查结果不存在
           content:
             application/json:
               schema:
@@ -255,7 +452,7 @@ paths:
       operationId: queryTmfSidCatalogTree
       summary: 查询 TMF SID 目录树
       description: |
-        查询 TMF SID 目录树，包含 Domain / ABE / BE / 业务对象等各级目录。
+        查询 TMF SID 目录树，包含 Domain / ABE / BE / 业务对象 等各级目录。
         返回递归嵌套结构，表达父子层级关系。
         
         dataTypeId 枚举值：
@@ -347,7 +544,6 @@ paths:
           schema:
             type: integer
             default: 1
-            minimum: 1
         - name: pageSize
           in: query
           schema:
@@ -379,11 +575,8 @@ components:
         code:
           type: string
           example: success
-          description: 响应结果码，success-成功，fail-失败
         msg:
           type: string
-          example: Query success
-          description: 响应结果描述
 
     ErrorResponse:
       type: object
@@ -393,23 +586,18 @@ components:
           example: fail
         msg:
           type: string
-          example: Logical model not found
 
     PaginationInfo:
       type: object
       properties:
         pageNum:
           type: integer
-          description: 当前页码
         pageSize:
           type: integer
-          description: 每页条数
         total:
           type: integer
-          description: 总记录数
         pages:
           type: integer
-          description: 总页数
 
     PaginationList:
       type: object
@@ -433,26 +621,19 @@ components:
 
     LogicalModel:
       type: object
-      description: 逻辑模型完整详情
       properties:
         tableName:
           type: string
-          description: 逻辑模型名称（主键）
         labelCh:
           type: string
-          description: 中文别名
         labelEn:
           type: string
-          description: 英文别名
         descCh:
           type: string
-          description: 中文描述
         descEn:
           type: string
-          description: 英文描述
         billType:
           type: string
-          description: 单据类型
           enum:
             - buziType_global
             - buziType_xdr
@@ -466,69 +647,50 @@ components:
             - buziType_dcae_event
         tenantId:
           type: string
-          description: 租户ID
         appName:
           type: string
-          description: 归属APP
         status:
           type: string
-          description: 发布状态
           enum: [draft, release]
         openFlag:
           type: integer
-          description: 开放标识，0-私有，1-开放
         subscribedFlag:
           type: integer
-          description: 订阅标识，0-不订阅，1-订阅
         relatedCatalogs:
           type: array
           items:
             $ref: '#/components/schemas/RelatedCatalog'
-          description: 关联分层信息
         relatedSubjectAreas:
           type: array
           items:
             $ref: '#/components/schemas/RelatedSubjectArea'
-          description: 关联主题域
         relatedCube:
           type: array
           items:
             $ref: '#/components/schemas/RelatedCube'
-          description: 关联的汇聚模型
         relatedPhysicalModels:
           type: array
           items:
             $ref: '#/components/schemas/PhysicalModel'
-          description: 关联物理模型
         logicalColumns:
           type: array
           items:
             $ref: '#/components/schemas/LogicalColumn'
-          description: 逻辑列定义
         logicTableRels:
           type: array
           items:
             $ref: '#/components/schemas/LogicLogicRel'
-          description: 逻辑模型间血缘关系
         indicatorsUsed:
           type: array
           items:
             $ref: '#/components/schemas/IndicatorsUsed'
-          description: 引用指标
         measureUsed:
           type: array
           items:
             $ref: '#/components/schemas/MeasureUsed'
-          description: 引用度量
-        dimLevelsUsed:
-          type: array
-          items:
-            $ref: '#/components/schemas/DimLevelsUsed'
-          description: 引用维度层级
 
     LogicalColumn:
       type: object
-      description: 逻辑列定义
       properties:
         tableName:
           type: string
@@ -576,24 +738,8 @@ components:
           type: string
         mapPhyColumnExpression:
           type: string
-          description: 逻辑列映射到物理列的表达式
 
     RelatedCatalog:
-      type: object
-      properties:
-        catalogId:
-          type: string
-        catalogName:
-          type: string
-        catalogNameEn:
-          type: string
-        dataStandardName:
-          type: array
-          items:
-            type: string
-          description: 元数据标准编码列表
-
-    RelatedCatalogWithNamingStandard:
       type: object
       properties:
         catalogId:
@@ -645,7 +791,6 @@ components:
 
     PhysicalModel:
       type: object
-      description: 物理模型（嵌套在逻辑模型内）
       properties:
         physicalModelName:
           type: string
@@ -664,18 +809,14 @@ components:
           type: string
         taskCycle:
           type: integer
-          description: 任务周期，单位秒
         ageValue:
           type: integer
         ageType:
           type: integer
-          description: 老化类型，1-连续型老化，2-非连续型老化
         ageUnit:
           type: string
-          description: 老化单位，如 P1D、PT1H、P1M、P1Y
         intervalValue:
           type: integer
-          description: 时间粒度
         dataDirectory:
           type: string
         validStartTime:
@@ -731,7 +872,6 @@ components:
         indexType:
           type: string
           enum: [BTree, UPI, PI, SI]
-          description: BTree-B+树索引，UPI-唯一索引，PI-主键索引，SI-空间索引
         subscribedFlag:
           type: integer
         sensitiveType:
@@ -796,51 +936,8 @@ components:
         subscribedFlag:
           type: integer
 
-    DimLevelsUsed:
-      type: object
-      properties:
-        tableName:
-          type: string
-        dimensionId:
-          type: integer
-          format: int64
-        dimensionName:
-          type: string
-        dimLevelId:
-          type: integer
-          format: int64
-        dimLevelName:
-          type: string
-        dimAttributeId:
-          type: string
-        dimAttributeName:
-          type: string
-        attributeLabelCh:
-          type: string
-        attributeLabelEn:
-          type: string
-        mapExpression:
-          type: string
-        tenantId:
-          type: string
-        openFlag:
-          type: integer
-          format: int64
-        deletedFlag:
-          type: integer
-          format: int64
-        subscribedFlag:
-          type: integer
-          format: int64
-        filterType:
-          type: string
-          enum: [IN, NOT IN, NULL, NOT NULL, LIKE, NOT LIKE, =, >, >=, <, <=, BETWEEN]
-        filterExpression:
-          type: string
-
     LogicalLineage:
       type: object
-      description: 逻辑模型血缘关系（递归嵌套结构）
       properties:
         appName:
           type: string
@@ -862,14 +959,95 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/LogicalLineage'
-          description: 前向血缘关系链路（我依赖谁）
         backwardImpact:
           type: array
           items:
             $ref: '#/components/schemas/LogicalLineage'
-          description: 后向影响关系链路（谁依赖我）
 
-    # ===== 响应结构 =====
+    # ===== 逻辑模型版本历史 =====
+
+    LogicalModelVersion:
+      type: object
+      description: 逻辑模型版本快照摘要
+      properties:
+        version:
+          type: integer
+          description: 版本号（自增）
+        changeType:
+          type: string
+          description: 版本变更类型
+          enum: [CREATE, RELEASE, COLUMN_ADDED, COLUMN_MODIFIED, COLUMN_DELETED,
+                 PHYSICAL_MODEL_ADDED, PHYSICAL_MODEL_DELETED, PHYSICAL_MODEL_CHANGED,
+                 OPEN_FLAG_CHANGED]
+        changeSummary:
+          type: string
+          description: 变更摘要描述
+        releasedAt:
+          type: string
+          format: date-time
+          description: 版本发布时间
+        releasedBy:
+          type: string
+          description: 发布人
+        status:
+          type: string
+          enum: [draft, release]
+
+    LogicalModelVersionDetail:
+      allOf:
+        - $ref: '#/components/schemas/LogicalModelVersion'
+        - type: object
+          properties:
+            snapshot:
+              $ref: '#/components/schemas/LogicalModel'
+              description: 完整的模型快照
+
+    LogicalModelDiffItem:
+      type: object
+      description: 单个字段变更详情
+      properties:
+        path:
+          type: string
+          description: 变更字段路径，如 logicalColumns[0].columnName
+        changeType:
+          type: string
+          enum: [ADDED, MODIFIED, DELETED]
+        from:
+          type: object
+          description: 变更前的值
+        to:
+          type: object
+          description: 变更后的值
+
+    LogicalModelDiff:
+      type: object
+      description: 版本差异比对结果
+      properties:
+        tableName:
+          type: string
+        fromVersion:
+          type: integer
+        toVersion:
+          type: integer
+        changedFields:
+          type: array
+          items:
+            $ref: '#/components/schemas/LogicalModelDiffItem'
+        summary:
+          type: object
+          properties:
+            columnsAdded:
+              type: integer
+            columnsModified:
+              type: integer
+            columnsDeleted:
+              type: integer
+            physicalModelsAdded:
+              type: integer
+            physicalModelsDeleted:
+              type: integer
+
+    # ===== 响应结构（逻辑模型）=====
 
     LogicalModelListResponse:
       allOf:
@@ -902,24 +1080,54 @@ components:
             data:
               $ref: '#/components/schemas/LogicalLineage'
 
-    # ===== 数据质量 =====
+    LogicalModelVersionListResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                tableName:
+                  type: string
+                list:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/LogicalModelVersion'
+                pagination:
+                  $ref: '#/components/schemas/PaginationInfo'
 
-    DataQualityReport:
+    LogicalModelVersionDetailResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/LogicalModelVersionDetail'
+
+    LogicalModelDiffResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/LogicalModelDiff'
+
+    # ===== 数据质量核查结果 =====
+
+    DataQualityResult:
       type: object
-      description: 数据质量核查报告
+      description: 数据质量核查结果
       properties:
         jobInsId:
           type: string
-          description: 稽核任务实例ID
+          description: 稽核任务实例ID（每次核查运行生成唯一ID，即一个结果快照）
         tableInsId:
           type: string
-          description: 稽核任务度量ID
         jobInsCode:
           type: string
-          description: 任务实例编码
         jobInsName:
           type: string
-          description: 任务实例名称
         taskId:
           type: string
         taskCode:
@@ -934,31 +1142,24 @@ components:
           type: string
         dsType:
           type: integer
-          description: 数据源类型
         taskName:
           type: string
         tableCode:
           type: string
-          description: 模型编码
         tableName:
           type: string
-          description: 模型名称
         colName:
           type: string
-          description: 字段名称
         createOperator:
           type: string
         description:
           type: string
         startDataTime:
           type: string
-          description: 数据开始时间
         endDataTime:
           type: string
-          description: 数据结束时间
         sumLineNum:
           type: integer
-          description: 总行数
         startTime:
           type: integer
           format: int64
@@ -969,51 +1170,42 @@ components:
           description: 结束时间（Unix毫秒）
         status:
           type: integer
-          description: 状态
         score:
           type: number
           format: double
-          description: 评分
+          description: 质量评分
         scheduler:
           type: string
         taskTableId:
           type: string
-          description: 表级任务ID
         taskColId:
           type: string
-          description: 字段级任务ID
         modelId:
           type: string
-          description: 主表模型ID
 
-    DataQualityReportDetail:
+    DataQualityResultDetail:
       allOf:
-        - $ref: '#/components/schemas/DataQualityReport'
+        - $ref: '#/components/schemas/DataQualityResult'
         - type: object
           properties:
             jsonData:
               type: object
-              description: 根据任务信息生成的JSON数据
             jobInstanceDetailTableList:
               type: array
               items:
                 $ref: '#/components/schemas/JobInstanceResultDetailBo'
-              description: 表间任务稽核结果集合
             jobInstanceDetailSingTableList:
               type: array
               items:
                 $ref: '#/components/schemas/JobInstanceResultDetailBo'
-              description: 单表任务稽核结果集合
             jobInstanceDetailFieldList:
               type: array
               items:
                 $ref: '#/components/schemas/JobInstanceResultDetailBo'
-              description: 字段级稽核结果集合
             jobInstanceDetailSqlList:
               type: array
               items:
                 $ref: '#/components/schemas/JobInstanceResultDetailBo'
-              description: SQL稽核结果集合
             jobInsResultDetailFieldBo:
               $ref: '#/components/schemas/JobInsResultDetailField'
 
@@ -1022,41 +1214,30 @@ components:
       properties:
         ruleCode:
           type: string
-          description: 规则编码
         threshold:
           type: integer
-          description: 阈值
         totalRecord:
           type: integer
-          description: 总记录数
         badRecord:
           type: integer
-          description: 错误记录数
         isCheckPass:
           type: integer
-          description: 是否检查通过
+          description: 0-未通过，1-通过
         flagSite:
           type: string
-          description: 作用对象
         fields:
           type: string
-          description: 字段名
         needErrorData:
           type: boolean
-          description: 是否下载错误数据
         aidedTableCode:
           type: string
-          description: 辅助表Code
         aidedTableCol:
           type: string
-          description: 辅助表字段
         dependentRelation:
           type: string
-          description: 依赖关系
 
     JobInsResultDetailField:
       type: object
-      description: 稽核任务字段结果详情
       properties:
         ruleCode:
           type: string
@@ -1071,7 +1252,63 @@ components:
         fields:
           type: string
 
-    DataQualityReportListResponse:
+    RuleDelta:
+      type: object
+      description: 单个规则的比对结果
+      properties:
+        ruleCode:
+          type: string
+        ruleName:
+          type: string
+        fromBadRecord:
+          type: integer
+        toBadRecord:
+          type: integer
+        fromIsPass:
+          type: integer
+        toIsPass:
+          type: integer
+        delta:
+          type: string
+          description: 变化类型：IMPROVED（改善）、DEGRADED（恶化）、UNCHANGED（不变）
+          enum: [IMPROVED, DEGRADED, UNCHANGED]
+
+    DataQualityDiff:
+      type: object
+      description: 核查结果比对结果
+      properties:
+        fromJobInsId:
+          type: string
+        toJobInsId:
+          type: string
+        fromScore:
+          type: number
+          format: double
+        toScore:
+          type: number
+          format: double
+        scoreDelta:
+          type: number
+          format: double
+          description: 分数变化值（正数为提升，负数为下降）
+        ruleDeltas:
+          type: array
+          items:
+            $ref: '#/components/schemas/RuleDelta'
+        newFailedRules:
+          type: array
+          items:
+            type: string
+          description: 新增的失败规则编码
+        recoveredRules:
+          type: array
+          items:
+            type: string
+          description: 恢复通过的规则编码
+
+    # ===== 响应结构（数据质量）=====
+
+    DataQualityResultListResponse:
       allOf:
         - $ref: '#/components/schemas/ApiResponse'
         - type: object
@@ -1082,23 +1319,47 @@ components:
                 list:
                   type: array
                   items:
-                    $ref: '#/components/schemas/DataQualityReport'
+                    $ref: '#/components/schemas/DataQualityResult'
                 pagination:
                   $ref: '#/components/schemas/PaginationInfo'
 
-    DataQualityReportDetailResponse:
+    DataQualityResultDetailResponse:
       allOf:
         - $ref: '#/components/schemas/ApiResponse'
         - type: object
           properties:
             data:
-              $ref: '#/components/schemas/DataQualityReportDetail'
+              $ref: '#/components/schemas/DataQualityResultDetail'
+
+    DataQualityHistoryListResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                currentJobInsId:
+                  type: string
+                tableCode:
+                  type: string
+                history:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/DataQualityResult'
+
+    DataQualityDiffResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/DataQualityDiff'
 
     # ===== TMF SID 目录 =====
 
     TmfSidCatalogNode:
       type: object
-      description: TMF SID 目录节点（递归嵌套）
       properties:
         catalogId:
           type: string
@@ -1128,27 +1389,22 @@ components:
           type: array
           items:
             type: string
-          description: 场景ID列表
         lastUpdateDate:
           type: string
         lastUpdateDateStr:
           type: string
         modified:
           type: boolean
-          description: 是否被修改
         children:
           type: array
           items:
             $ref: '#/components/schemas/TmfSidCatalogNode'
-          description: 子目录
 
     TmfSidModelSearchResult:
       type: object
-      description: 目录下的模型搜索结果
       properties:
         dataAssetId:
           type: string
-          description: 逻辑模型ID
         dataDescCn:
           type: string
         dataDescEn:
@@ -1163,7 +1419,6 @@ components:
             type: array
             items:
               type: string
-          description: 高亮字段，key为字段名，value为高亮片段列表
         logicalAttriList:
           type: array
           items:
@@ -1184,7 +1439,6 @@ components:
           type: string
         createDateStr:
           type: string
-          description: 模型同步时间
 
     LogicalAttri:
       type: object
@@ -1244,26 +1498,28 @@ components:
         - type: object
           properties:
             data:
-              $ref: '#/components/schemas/PaginationList'
-              description: 分页模型列表
-              example:
+              type: object
+              properties:
                 list:
-                  - dataAssetId: "AUTO_1"
-                    dataDescCn: "示例模型"
-                    dataNameCn: "AUTO_1"
-                pageNum: 1
-                pageSize: 15
-                total: 1
-                pages: 1
-                size: 0
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/TmfSidModelSearchResult'
+                pageNum:
+                  type: integer
+                pageSize:
+                  type: integer
+                total:
+                  type: integer
+                pages:
+                  type: integer
+                size:
+                  type: integer
 
-# ============================================================
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: 使用 Bearer Token 认证，Token 通过 Authorization Header 传递
 
 security:
   - bearerAuth: []
