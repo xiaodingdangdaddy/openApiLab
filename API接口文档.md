@@ -1,6 +1,6 @@
 # 元数据管理查询接口 - API 接口文档
 
-> 本文档基于 OpenAPI 3.1 规范编写（v2.0），包含所有接口的请求参数、响应格式、字段说明。
+> 本文档基于 OpenAPI 3.1 规范编写（v2.1），包含所有接口的请求参数、响应格式、字段说明。
 
 ---
 
@@ -179,10 +179,15 @@
 | 参数 | 必选 | 说明 |
 |------|------|------|
 | tenantId | 是 | 租户ID |
-| catalogId | 否 | 目录ID |
+| catalogIdPath | 否 | 目录ID（递归，该目录及子目录下所有模型） |
 | tableCode | 否 | 模型编码 |
 | startDataTime | 否 | 数据开始日期（YYYY-MM-DD） |
 | endDataTime | 否 | 数据结束日期（YYYY-MM-DD） |
+| status | 否 | 作业状态（success/failed/warning） |
+| minScore | 否 | 最低质量评分（0-100） |
+| maxScore | 否 | 最高质量评分（0-100） |
+| ruleType | 否 | 规则类型（accuracy/completeness/uniqueness） |
+| owner | 否 | 模型责任人 |
 | pageNum / pageSize | 否 | 分页参数 |
 
 ---
