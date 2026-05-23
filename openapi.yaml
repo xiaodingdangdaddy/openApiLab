@@ -299,6 +299,12 @@ paths:
           required: true
           schema:
             type: string
+        - name: jobInsId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: 任务实例ID（精确匹配）
         - name: catalogIdPath
           in: query
           schema:
@@ -321,6 +327,35 @@ paths:
             type: string
             format: date
           description: 数据结束日期（YYYY-MM-DD）
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [success, failed, warning]
+          description: 作业状态
+        - name: minScore
+          in: query
+          schema:
+            type: number
+            format: double
+          description: 最低质量评分（0-100）
+        - name: maxScore
+          in: query
+          schema:
+            type: number
+            format: double
+          description: 最高质量评分（0-100）
+        - name: ruleType
+          in: query
+          schema:
+            type: string
+            enum: [Timeliness, accuracy, consistency, completeness, validity, uniqueness]
+          description: 规则类型（数据质量六性）
+        - name: owner
+          in: query
+          schema:
+            type: string
+          description: 模型责任人
         - name: pageNum
           in: query
           schema:
@@ -332,7 +367,7 @@ paths:
             type: integer
             default: 20
             maximum: 500
-      responses:
+
         '200':
           description: 成功
           content:
