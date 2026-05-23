@@ -1,0 +1,5 @@
+{
+  "repo": "xiaodingdangdaddy/openApiLab",
+  "push_script": "python3 ~/.agents/skills/openapi-github-sync/scripts/push_to_github.py",
+  "description": "GitHub push is optional. When user asks to push to GitHub, use push_script above with the file(s) as arguments."
+}
