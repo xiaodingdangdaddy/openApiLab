@@ -1,6 +1,6 @@
 # 元数据管理查询接口（Metadata Query API）
 
-基于 OpenAPI 3.1 规范（v2.0）封装的元数据管理统一查询接口，对外提供逻辑模型、血缘关系、版本追踪、数据质量、TMF SID 数据目录的查询能力。
+基于 OpenAPI 3.1 规范（v2.1）封装的元数据管理统一查询接口，对外提供逻辑模型、血缘关系、版本追踪、数据质量、TMF SID 数据目录的查询能力。
 
 ---
 
@@ -82,7 +82,7 @@ curl -k -X GET 'https://api.example.com/api/v1/logical-models?tenantId=your_tena
 
 | 文件 | 说明 |
 |------|------|
-| `openapi.yaml` | OpenAPI 3.1 规范文件（v2.0），可导入 Apifox / Postman / Swagger UI |
+| `openapi.yaml` | OpenAPI 3.1 规范文件（v2.1），可导入 Apifox / Postman / Swagger UI |
 | `API接口文档.md` | 接口详细文档，含请求/响应示例、字段说明、版本变更规则 |
 | `使用说明书.md` | 面向调用方的使用指南，含 Python 示例代码 |
 
