@@ -299,11 +299,11 @@ paths:
           required: true
           schema:
             type: string
-        - name: catalogId
+        - name: catalogIdPath
           in: query
           schema:
             type: string
-          description: 目录ID筛选
+          description: 目录ID筛选（递归，包含该目录下所有子目录）
         - name: tableCode
           in: query
           schema:
