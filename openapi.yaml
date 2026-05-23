@@ -6,7 +6,7 @@ info:
     基于已有接口标准化后的 OpenAPI 3.1 规范，提供分页查询、详情查询、血缘查询、能力。
     
     本接口采用 Pull 模式设计，供 Datahub 等元数据管理平台主动调用拉取元数据。
-  version: 2.0.0
+  version: 2.2.0
   contact:
     name: 架构团队
   license:
@@ -39,7 +39,7 @@ paths:
         - logical-models
       operationId: queryLogicalModels
       summary: 查询逻辑模型列表
-      description: 分页查询逻辑模型基本信息列表，支持按状态、单据类型筛选。
+      description: 分页查询逻辑模型基本信息列表，支持按场景、目录、责任人、时间等多维度筛选。
       parameters:
         - name: tenantId
           in: query
@@ -58,6 +58,34 @@ paths:
           schema:
             type: string
           description: 单据类型筛选
+        - name: themeId
+          in: query
+          schema:
+            type: string
+          description: 场景ID（模型标签/场景过滤）
+        - name: catalogIdPath
+          in: query
+          schema:
+            type: string
+          description: 目录ID（递归，该目录及所有子目录下模型）
+        - name: owner
+          in: query
+          schema:
+            type: string
+          description: 模型责任人（精确匹配）
+        - name: startCreateTime
+          in: query
+          schema:
+            type: string
+            format: date
+          description: 创建时间起（YYYY-MM-DD）
+        - name: endCreateTime
+          in: query
+          schema:
+            type: string
+            format: date
+          description: 创建时间止（YYYY-MM-DD）
+
         - name: pageNum
           in: query
           schema:
@@ -144,6 +172,31 @@ paths:
           schema:
             type: string
           description: 租户ID，必选
+        - name: catalogIdPath
+          in: query
+          schema:
+            type: string
+          description: 目录ID（递归，返回该目录下所有模型的各自血缘）
+        - name: themeId
+          in: query
+          schema:
+            type: string
+          description: 场景ID（返回该场景下所有模型的各自血缘）
+        - name: direction
+          in: query
+          schema:
+            type: string
+            enum: [upstream, downstream, both]
+            default: both
+          description: 血缘方向：upstream=前向/downstream=后向/both=双向
+        - name: depth
+          in: query
+          schema:
+            type: integer
+            default: 3
+            maximum: 10
+          description: 递归深度，默认3，最大10
+
       responses:
         '200':
           description: 成功
