@@ -1,0 +1,199 @@
+# OpenAPI 3.1 模板
+
+> 直接复制此模板，填充具体接口信息即可生成 openapi.yaml
+
+```yaml
+openapi: 3.1.0
+info:
+  title: <项目名称>
+  description: |
+    <项目描述，接口用途说明>
+  version: <版本号，格式 1.0.0 / 2.0.0>
+  contact:
+    name: <联系人/团队>
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+
+servers:
+  - url: https://<api-domain>/api/v1
+    description: 正式环境
+  - url: https://<api-test-domain>/api/v1
+    description: 测试环境
+
+tags:
+  - name: <resource-group-1>
+    description: <资源组说明>
+  - name: <resource-group-2>
+    description: <资源组说明>
+
+# ============================================================
+paths:
+  # ============================================================
+  # <资源组1>
+  # ============================================================
+
+  /<resource>:
+    get:
+      tags:
+        - <resource-group-1>
+      operationId: <operationId>
+      summary: <简要说明>
+      description: |
+        <详细说明：接口功能、调用场景、注意事项>
+      parameters:
+        - name: tenantId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: 租户ID，必选
+        # === 在此添加其他 query 参数 ===
+        - name: <paramName>
+          in: query
+          required: false
+          schema:
+            type: <string/integer/number/boolean>
+            enum: [<枚举值>]  # 如有枚举
+          description: <参数说明>
+        - name: pageNum
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: 页码
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 500
+          description: 每页条数
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/<Resource>ListResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /<resource>/{id}:
+    get:
+      tags:
+        - <resource-group-1>
+      operationId: <operationId>
+      summary: 查询单个<资源>详情
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: <资源>标识
+        - name: tenantId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/<Resource>DetailResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+# ============================================================
+components:
+  schemas:
+    # ============================================================
+    # 通用结构
+    # ============================================================
+
+    ApiResponse:
+      type: object
+      properties:
+        code:
+          type: string
+          example: success
+        msg:
+          type: string
+          example: Query success
+
+    PaginationInfo:
+      type: object
+      properties:
+        pageNum:
+          type: integer
+          example: 1
+        pageSize:
+          type: integer
+          example: 20
+        total:
+          type: integer
+          example: 156
+        pages:
+          type: integer
+          example: 8
+
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: string
+          example: fail
+        msg:
+          type: string
+          example: Resource not found
+
+    # ============================================================
+    # <资源1> Schema
+    # ============================================================
+
+    <Resource>:
+      type: object
+      description: <资源>描述
+      properties:
+        id:
+          type: string
+          description: <资源>ID
+        name:
+          type: string
+          description: <名称>
+        # === 在此添加其他字段 ===
+        <fieldName>:
+          type: string
+          description: <字段说明>
+
+    <Resource>ListResponse:
+      type: object
+      properties:
+        code: { type: string, example: success }
+        msg: { type: string, example: Query success }
+        data:
+          type: object
+          properties:
+            list:
+              type: array
+              items: { $ref: '#/components/schemas/<Resource>' }
+            pagination: { $ref: '#/components/schemas/PaginationInfo' }
+
+    <Resource>DetailResponse:
+      type: object
+      properties:
+        code: { type: string, example: success }
+        msg: { type: string, example: Query success }
+        data: { $ref: '#/components/schemas/<Resource>' }
+```
