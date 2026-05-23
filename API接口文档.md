@@ -59,8 +59,13 @@
 | 参数 | 位置 | 必选 | 类型 | 说明 |
 |------|------|------|------|------|
 | tenantId | query | 是 | string | 租户ID |
+| themeId | query | 否 | string | 场景ID（模型标签/场景过滤） |
+| catalogIdPath | query | 否 | string | 目录ID（递归，该目录及所有子目录下模型） |
+| owner | query | 否 | string | 模型责任人（精确匹配） |
 | status | query | 否 | string | `draft` / `release` |
 | billType | query | 否 | string | 单据类型 |
+| startCreateTime | query | 否 | string | 创建时间起（YYYY-MM-DD） |
+| endCreateTime | query | 否 | string | 创建时间止（YYYY-MM-DD） |
 | pageNum | query | 否 | integer | 页码，默认 1 |
 | pageSize | query | 否 | integer | 每页最大 500，默认 20 |
 
@@ -182,21 +187,85 @@
 
 **GET** `/api/v1/logical-models/{tableName}/lineage`
 
-返回递归嵌套的前向血缘 / 后向影响链路。
+查询逻辑模型的前向血缘和后向影响链路。
 
 **路径参数：**
 
 | 参数 | 位置 | 必选 | 类型 | 说明 |
 |------|------|------|------|------|
-| tableName | path | 是 | string | 逻辑模型名称 |
+| tableName | path | 是 | string | 逻辑模型名称（传入 `_batch` 启用批量模式） |
 
 **Query 参数：**
 
 | 参数 | 位置 | 必选 | 类型 | 说明 |
 |------|------|------|------|------|
 | tenantId | query | 是 | string | 租户ID |
-| direction | query | 否 | string | 血缘方向：`upstream`（前向）/ `downstream`（后向），默认返回双向 |
+| catalogIdPath | query | 否 | string | 目录ID（递归，该目录及所有子目录下所有模型，批量模式） |
+| themeId | query | 否 | string | 场景ID（该场景下所有模型，批量模式） |
+| direction | query | 否 | string | 血缘方向：`upstream`（前向）/ `downstream`（后向）/ `both`（双向），默认 `both` |
 | depth | query | 否 | integer | 递归深度，默认 3，最大 10 |
+
+**批量模式说明：**
+
+传入 `tableName=_batch` 且同时传入 `catalogIdPath` 或 `themeId`，返回该目录或场景下**所有模型**的各自血缘列表（JSON 数组），每个元素结构同单个模型返回值。
+
+**响应示例（单个模型）：**
+
+```json
+{
+  "code": "success",
+  "msg": "Query success",
+  "data": {
+    "tableName": "dim_user",
+    "upstream": [
+      {
+        "tableName": "ods_user",
+        "labelCh": "用户原始表",
+        "direction": "upstream",
+        "lineageLevel": 1,
+        "children": [
+          {
+            "tableName": "ods_user_backup",
+            "labelCh": "用户历史备份表",
+            "direction": "upstream",
+            "lineageLevel": 2
+          }
+        ]
+      }
+    ],
+    "downstream": [
+      {
+        "tableName": "rpt_user_stats",
+        "labelCh": "用户统计报表",
+        "direction": "downstream",
+        "lineageLevel": 1,
+        "children": []
+      }
+    ]
+  }
+}
+```
+
+**响应示例（批量模式 `tableName=_batch`）：**
+
+```json
+{
+  "code": "success",
+  "msg": "Query success",
+  "data": [
+    {
+      "tableName": "dim_user",
+      "upstream": [...],
+      "downstream": [...]
+    },
+    {
+      "tableName": "ods_user",
+      "upstream": [...],
+      "downstream": [...]
+    }
+  ]
+}
+```
 
 **响应示例：**
 ```json
@@ -775,3 +844,4 @@
 |------|------|---------|
 | v2.0 | 2026-05-21 | 初始版本，10 个查询接口 |
 | v2.1 | 2026-05-23 | DQ 列表接口增加 jobInsId/status/minScore/maxScore/ruleType/owner 等过滤维度；修正 ruleType 枚举为六性；补全所有接口的请求/响应详情 |
+| v2.2 | 2026-05-23 | logical-models 列表增加 themeId/catalogIdPath/owner/startCreateTime/endCreateTime；lineage 接口增加 catalogIdPath/themeId/direction/depth，支持批量模式 |
